@@ -5,6 +5,7 @@ class Order(models.Model):
     STATUS_CHOICES = [
         ("pending", "Pending"),
         ("confirmed", "Confirmed"),
+        ("failed", "Failed"),
         ("paid", "Paid"),
         ("shipped", "Shipped"),
         ("delivered", "Delivered"),

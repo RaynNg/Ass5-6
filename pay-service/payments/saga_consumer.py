@@ -6,7 +6,9 @@ import django
 
 logger = logging.getLogger(__name__)
 
-RABBITMQ_URL = os.environ.get("RABBITMQ_URL", "amqp://bookstore:bookstore@rabbitmq:5672/")
+RABBITMQ_URL = os.environ.get(
+    "RABBITMQ_URL", "amqp://bookstore:bookstore@rabbitmq:5672/"
+)
 
 PAYMENT_QUEUE = "saga.reserve_payment"
 COMPENSATE_QUEUE = "saga.compensate_payment"
@@ -34,6 +36,7 @@ def _run_consumer():
 
             def on_reserve_payment(ch, method, props, body):
                 from payments.models import Payment
+
                 try:
                     data = json.loads(body)
                     payment = Payment.objects.create(
@@ -41,7 +44,7 @@ def _run_consumer():
                         customer_id=data["customer_id"],
                         amount=data["amount"],
                         method=data.get("method", "cod"),
-                        status="completed",
+                        status="pending",
                     )
                     reply = {"success": True, "payment_id": payment.id}
                 except Exception as exc:
@@ -51,23 +54,32 @@ def _run_consumer():
                 ch.basic_publish(
                     exchange="",
                     routing_key=props.reply_to,
-                    properties=pika.BasicProperties(correlation_id=props.correlation_id),
+                    properties=pika.BasicProperties(
+                        correlation_id=props.correlation_id
+                    ),
                     body=json.dumps(reply),
                 )
                 ch.basic_ack(delivery_tag=method.delivery_tag)
 
             def on_compensate_payment(ch, method, props, body):
                 from payments.models import Payment
+
                 try:
                     data = json.loads(body)
-                    Payment.objects.filter(id=data["payment_id"]).update(status="refunded")
+                    Payment.objects.filter(id=data["payment_id"]).update(
+                        status="refunded"
+                    )
                     logger.info("Compensated payment %s", data["payment_id"])
                 except Exception as exc:
                     logger.error("Payment compensation failed: %s", exc)
                 ch.basic_ack(delivery_tag=method.delivery_tag)
 
-            channel.basic_consume(queue=PAYMENT_QUEUE, on_message_callback=on_reserve_payment)
-            channel.basic_consume(queue=COMPENSATE_QUEUE, on_message_callback=on_compensate_payment)
+            channel.basic_consume(
+                queue=PAYMENT_QUEUE, on_message_callback=on_reserve_payment
+            )
+            channel.basic_consume(
+                queue=COMPENSATE_QUEUE, on_message_callback=on_compensate_payment
+            )
 
             logger.info("Pay-service saga consumer started.")
             channel.start_consuming()
@@ -75,6 +87,7 @@ def _run_consumer():
         except Exception as exc:
             logger.error("Pay saga consumer error, retrying in 5s: %s", exc)
             import time
+
             time.sleep(5)
 
 

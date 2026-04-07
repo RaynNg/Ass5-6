@@ -5,9 +5,12 @@ import threading
 
 logger = logging.getLogger(__name__)
 
-RABBITMQ_URL = os.environ.get("RABBITMQ_URL", "amqp://bookstore:bookstore@rabbitmq:5672/")
+RABBITMQ_URL = os.environ.get(
+    "RABBITMQ_URL", "amqp://bookstore:bookstore@rabbitmq:5672/"
+)
 
 SHIPPING_QUEUE = "saga.reserve_shipping"
+COMPENSATE_QUEUE = "saga.compensate_shipping"
 
 
 def _run_consumer():
@@ -25,10 +28,12 @@ def _run_consumer():
             channel = connection.channel()
 
             channel.queue_declare(queue=SHIPPING_QUEUE, durable=True)
+            channel.queue_declare(queue=COMPENSATE_QUEUE, durable=True)
             channel.basic_qos(prefetch_count=1)
 
             def on_reserve_shipping(ch, method, props, body):
                 from shipping.models import Shipment
+
                 try:
                     data = json.loads(body)
                     shipment = Shipment.objects.create(
@@ -46,12 +51,32 @@ def _run_consumer():
                 ch.basic_publish(
                     exchange="",
                     routing_key=props.reply_to,
-                    properties=pika.BasicProperties(correlation_id=props.correlation_id),
+                    properties=pika.BasicProperties(
+                        correlation_id=props.correlation_id
+                    ),
                     body=json.dumps(reply),
                 )
                 ch.basic_ack(delivery_tag=method.delivery_tag)
 
-            channel.basic_consume(queue=SHIPPING_QUEUE, on_message_callback=on_reserve_shipping)
+            def on_compensate_shipping(ch, method, props, body):
+                from shipping.models import Shipment
+
+                try:
+                    data = json.loads(body)
+                    Shipment.objects.filter(id=data["shipping_id"]).update(
+                        status="failed"
+                    )
+                    logger.info("Compensated shipping %s", data["shipping_id"])
+                except Exception as exc:
+                    logger.error("Shipping compensation failed: %s", exc)
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+
+            channel.basic_consume(
+                queue=SHIPPING_QUEUE, on_message_callback=on_reserve_shipping
+            )
+            channel.basic_consume(
+                queue=COMPENSATE_QUEUE, on_message_callback=on_compensate_shipping
+            )
 
             logger.info("Ship-service saga consumer started.")
             channel.start_consuming()
@@ -59,6 +84,7 @@ def _run_consumer():
         except Exception as exc:
             logger.error("Ship saga consumer error, retrying in 5s: %s", exc)
             import time
+
             time.sleep(5)
 
 

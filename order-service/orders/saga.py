@@ -3,6 +3,7 @@ from .rabbitmq import rpc_call, publish_command
 PAYMENT_QUEUE = "saga.reserve_payment"
 SHIPPING_QUEUE = "saga.reserve_shipping"
 COMPENSATE_PAYMENT_QUEUE = "saga.compensate_payment"
+COMPENSATE_SHIPPING_QUEUE = "saga.compensate_shipping"
 
 
 class OrderSagaOrchestrator:
@@ -15,7 +16,15 @@ class OrderSagaOrchestrator:
       5. Compensate on failure (refund payment, cancel order)
     """
 
-    def execute(self, order, order_items, customer_id, payment_method, shipping_method, shipping_address):
+    def execute(
+        self,
+        order,
+        order_items,
+        customer_id,
+        payment_method,
+        shipping_method,
+        shipping_address,
+    ):
         """
         Run the saga. Returns (order, error_message).
         On success error_message is None.
@@ -24,7 +33,9 @@ class OrderSagaOrchestrator:
         total = float(order.total_amount)
 
         # ── Step 2: Reserve Payment ────────────────────────────────────────────
-        payment_result = self._reserve_payment(order, customer_id, payment_method, total)
+        payment_result = self._reserve_payment(
+            order, customer_id, payment_method, total
+        )
         if not payment_result or not payment_result.get("success"):
             order.status = "failed"
             order.save(update_fields=["status"])
@@ -34,22 +45,34 @@ class OrderSagaOrchestrator:
         payment_id = payment_result.get("payment_id")
 
         # ── Step 3: Reserve Shipping ───────────────────────────────────────────
-        shipping_result = self._reserve_shipping(order, customer_id, shipping_address, shipping_method)
+        shipping_result = self._reserve_shipping(
+            order, customer_id, shipping_address, shipping_method
+        )
         if not shipping_result or not shipping_result.get("success"):
             # Compensate: cancel the reserved payment
             self._compensate_payment(payment_id)
             order.status = "failed"
             order.save(update_fields=["status"])
-            reason = (shipping_result or {}).get("error", "No response from ship-service")
+            reason = (shipping_result or {}).get(
+                "error", "No response from ship-service"
+            )
             return order, f"Shipping failed: {reason}"
 
         shipping_id = shipping_result.get("shipping_id")
 
         # ── Step 4: Confirm Order ──────────────────────────────────────────────
-        order.status = "confirmed"
-        order.payment_id = payment_id
-        order.shipping_id = shipping_id
-        order.save(update_fields=["status", "payment_id", "shipping_id"])
+        try:
+            order.status = "confirmed"
+            order.payment_id = payment_id
+            order.shipping_id = shipping_id
+            order.save(update_fields=["status", "payment_id", "shipping_id"])
+        except Exception as exc:
+            # If final confirmation fails, compensate both downstream reservations.
+            self._compensate_shipping(shipping_id)
+            self._compensate_payment(payment_id)
+            order.status = "failed"
+            order.save(update_fields=["status"])
+            return order, f"Order confirmation failed: {exc}"
 
         return order, None
 
@@ -80,3 +103,7 @@ class OrderSagaOrchestrator:
     def _compensate_payment(self, payment_id):
         if payment_id:
             publish_command(COMPENSATE_PAYMENT_QUEUE, {"payment_id": payment_id})
+
+    def _compensate_shipping(self, shipping_id):
+        if shipping_id:
+            publish_command(COMPENSATE_SHIPPING_QUEUE, {"shipping_id": shipping_id})
