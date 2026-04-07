@@ -1,0 +1,493 @@
+services:
+  # ─────────────────── Infrastructure ───────────────────
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=bookstore
+      - RABBITMQ_DEFAULT_PASS=bookstore
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────── PostgreSQL Databases ───────────────────
+  postgres-auth:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=auth_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-staff:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=staff_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres-staff-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-manager:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=manager_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres-manager-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-customer:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=customer_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres-customer-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-catalog:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=catalog_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres-catalog-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-book:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=book_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres-book-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-cart:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=cart_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres-cart-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-order:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=order_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres-order-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-ship:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=ship_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres-ship-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-pay:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=pay_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres-pay-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-comment:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=comment_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres-comment-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-recommender:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=recommender_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres-recommender-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────── Frontend ───────────────────
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+
+  # ─────────────────── Admin Dashboard ───────────────────
+  admin-dashboard:
+    build: ./admin-dashboard
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api-gateway:8000
+    depends_on:
+      - api-gateway
+
+  # ─────────────────── Auth Service ───────────────────
+  auth-service:
+    build: ./auth-service
+    ports:
+      - "8012:8000"
+    environment:
+      - JWT_SECRET=bookstore-jwt-secret-change-in-production
+      - DB_HOST=postgres-auth
+      - DB_NAME=auth_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - CUSTOMER_SERVICE_URL=http://customer-service:8000
+      - STAFF_SERVICE_URL=http://staff-service:8000
+      - MANAGER_SERVICE_URL=http://manager-service:8000
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+      customer-service:
+        condition: service_started
+      staff-service:
+        condition: service_started
+      manager-service:
+        condition: service_started
+    volumes:
+      - auth-data:/app/data
+
+  # ─────────────────── API Gateway ───────────────────
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - STAFF_SERVICE_URL=http://staff-service:8000
+      - MANAGER_SERVICE_URL=http://manager-service:8000
+      - CUSTOMER_SERVICE_URL=http://customer-service:8000
+      - CATALOG_SERVICE_URL=http://catalog-service:8000
+      - BOOK_SERVICE_URL=http://book-service:8000
+      - CART_SERVICE_URL=http://cart-service:8000
+      - ORDER_SERVICE_URL=http://order-service:8000
+      - SHIP_SERVICE_URL=http://ship-service:8000
+      - PAY_SERVICE_URL=http://pay-service:8000
+      - COMMENT_SERVICE_URL=http://comment-rate-service:8000
+      - RECOMMENDER_SERVICE_URL=http://recommender-ai-service:8000
+      - AUTH_SERVICE_URL=http://auth-service:8000
+      - JWT_SECRET=bookstore-jwt-secret-change-in-production
+    depends_on:
+      - auth-service
+      - staff-service
+      - manager-service
+      - customer-service
+      - catalog-service
+      - book-service
+      - cart-service
+      - order-service
+      - ship-service
+      - pay-service
+      - comment-rate-service
+      - recommender-ai-service
+
+  # ─────────────────── Staff Service ───────────────────
+  staff-service:
+    build: ./staff-service
+    ports:
+      - "8001:8000"
+    environment:
+      - DB_HOST=postgres-staff
+      - DB_NAME=staff_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    depends_on:
+      postgres-staff:
+        condition: service_healthy
+    volumes:
+      - staff-data:/app/data
+
+  # ─────────────────── Manager Service ───────────────────
+  manager-service:
+    build: ./manager-service
+    ports:
+      - "8002:8000"
+    environment:
+      - DB_HOST=postgres-manager
+      - DB_NAME=manager_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    depends_on:
+      postgres-manager:
+        condition: service_healthy
+    volumes:
+      - manager-data:/app/data
+
+  # ─────────────────── Customer Service ───────────────────
+  customer-service:
+    build: ./customer-service
+    ports:
+      - "8003:8000"
+    environment:
+      - CART_SERVICE_URL=http://cart-service:8000
+      - DB_HOST=postgres-customer
+      - DB_NAME=customer_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    depends_on:
+      cart-service:
+        condition: service_started
+      postgres-customer:
+        condition: service_healthy
+    volumes:
+      - customer-data:/app/data
+
+  # ─────────────────── Catalog Service ───────────────────
+  catalog-service:
+    build: ./catalog-service
+    ports:
+      - "8004:8000"
+    environment:
+      - DB_HOST=postgres-catalog
+      - DB_NAME=catalog_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    depends_on:
+      postgres-catalog:
+        condition: service_healthy
+    volumes:
+      - catalog-data:/app/data
+
+  # ─────────────────── Book Service ───────────────────
+  book-service:
+    build: ./book-service
+    ports:
+      - "8005:8000"
+    environment:
+      - STAFF_SERVICE_URL=http://staff-service:8000
+      - CATALOG_SERVICE_URL=http://catalog-service:8000
+      - DB_HOST=postgres-book
+      - DB_NAME=book_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    depends_on:
+      postgres-book:
+        condition: service_healthy
+    volumes:
+      - book-data:/app/data
+
+  # ─────────────────── Cart Service ───────────────────
+  cart-service:
+    build: ./cart-service
+    ports:
+      - "8006:8000"
+    environment:
+      - BOOK_SERVICE_URL=http://book-service:8000
+      - DB_HOST=postgres-cart
+      - DB_NAME=cart_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    depends_on:
+      postgres-cart:
+        condition: service_healthy
+    volumes:
+      - cart-data:/app/data
+
+  # ─────────────────── Order Service ───────────────────
+  order-service:
+    build: ./order-service
+    ports:
+      - "8007:8000"
+    environment:
+      - CART_SERVICE_URL=http://cart-service:8000
+      - BOOK_SERVICE_URL=http://book-service:8000
+      - RABBITMQ_URL=amqp://bookstore:bookstore@rabbitmq:5672/
+      - DB_HOST=postgres-order
+      - DB_NAME=order_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    depends_on:
+      cart-service:
+        condition: service_started
+      book-service:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      postgres-order:
+        condition: service_healthy
+    volumes:
+      - order-data:/app/data
+
+  # ─────────────────── Ship Service ───────────────────
+  ship-service:
+    build: ./ship-service
+    ports:
+      - "8008:8000"
+    environment:
+      - RABBITMQ_URL=amqp://bookstore:bookstore@rabbitmq:5672/
+      - DB_HOST=postgres-ship
+      - DB_NAME=ship_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    depends_on:
+      postgres-ship:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ship-data:/app/data
+
+  # ─────────────────── Pay Service ───────────────────
+  pay-service:
+    build: ./pay-service
+    ports:
+      - "8009:8000"
+    environment:
+      - RABBITMQ_URL=amqp://bookstore:bookstore@rabbitmq:5672/
+      - DB_HOST=postgres-pay
+      - DB_NAME=pay_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    depends_on:
+      postgres-pay:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - pay-data:/app/data
+
+  # ─────────────────── Comment & Rate Service ───────────────────
+  comment-rate-service:
+    build: ./comment-rate-service
+    ports:
+      - "8010:8000"
+    environment:
+      - DB_HOST=postgres-comment
+      - DB_NAME=comment_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    depends_on:
+      postgres-comment:
+        condition: service_healthy
+    volumes:
+      - comment-data:/app/data
+
+  # ─────────────────── Recommender AI Service ───────────────────
+  recommender-ai-service:
+    build: ./recommender-ai-service
+    ports:
+      - "8011:8000"
+    environment:
+      - COMMENT_SERVICE_URL=http://comment-rate-service:8000
+      - BOOK_SERVICE_URL=http://book-service:8000
+      - DB_HOST=postgres-recommender
+      - DB_NAME=recommender_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    depends_on:
+      comment-rate-service:
+        condition: service_started
+      book-service:
+        condition: service_started
+      postgres-recommender:
+        condition: service_healthy
+    volumes:
+      - recommender-data:/app/data
+
+volumes:
+  rabbitmq-data:
+  postgres-auth-data:
+  postgres-staff-data:
+  postgres-manager-data:
+  postgres-customer-data:
+  postgres-catalog-data:
+  postgres-book-data:
+  postgres-cart-data:
+  postgres-order-data:
+  postgres-ship-data:
+  postgres-pay-data:
+  postgres-comment-data:
+  postgres-recommender-data:
+  auth-data:
+  staff-data:
+  manager-data:
+  customer-data:
+  catalog-data:
+  book-data:
+  cart-data:
+  order-data:
+  ship-data:
+  pay-data:
+  comment-data:
+  recommender-data:
