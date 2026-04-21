@@ -17,6 +17,7 @@ PUBLIC_PATHS = {
     ("POST", "/api/customers/customers/login/"),
     ("POST", "/api/staff/staff/login/"),
     ("POST", "/api/managers/managers/login/"),
+    ("POST", "/api/recommendations/chat/"),
     ("GET", "/api/health/"),
     ("GET", "/api/metrics/"),
     ("GET", "/api/services/"),

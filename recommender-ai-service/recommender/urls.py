@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from django.urls import path
-from .views import RecommendView
+from .views import RecommendView, ModelRecommendView, ChatView
 
 
 def health_check(request):
@@ -14,6 +14,8 @@ def health_check(request):
 
 
 urlpatterns = [
-    path("recommendations/", RecommendView.as_view(), name="recommendations"),
-    path("health/", health_check, name="health-check"),
+    path("recommendations/", RecommendView.as_view(),      name="recommendations"),
+    path("model-recommend/",  ModelRecommendView.as_view(), name="model-recommend"),
+    path("chat/",             ChatView.as_view(),           name="chat"),
+    path("health/",           health_check,                 name="health-check"),
 ]

@@ -55,5 +55,12 @@ export const commentService = {
 
 export const recommendationService = {
     getRecommendations: (customerId) =>
-        api.get('/recommendations/recommendations/for_customer/', { params: { customer_id: customerId } }),
+        api.get('/recommendations/recommendations/', { params: { customer_id: customerId } }),
+    getModelRecommendations: (userId, topN = 6) =>
+        api.get('/recommendations/model-recommend/', { params: { user_id: userId, top_n: topN } }),
+}
+
+export const chatService = {
+    send: (message, userId, history = []) =>
+        api.post('/recommendations/chat/', { message, user_id: userId, history }),
 }

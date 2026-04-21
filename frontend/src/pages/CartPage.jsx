@@ -4,10 +4,11 @@ import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import Loading from "../components/Loading";
 import EmptyState from "../components/EmptyState";
+import RecommendationSection from "../components/RecommendationSection";
 
 export default function CartPage() {
   const { cart, loading, updateItem, removeItem } = useCart();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, customer } = useAuth();
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -170,6 +171,13 @@ export default function CartPage() {
           </div>
         </div>
       </div>
+
+      {/* AI suggestions based on cart context */}
+      <RecommendationSection
+        userId={customer?.id?.toString() || ""}
+        title="Khách hàng cũng thích"
+        context="cart"
+      />
     </div>
   );
 }

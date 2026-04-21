@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ' *)",
+      "Bash(py --version)",
+      "Bash(where python3 *)",
+      "Bash(where python *)",
+      "Bash(where py *)",
+      "Bash(python -c \"import torch; print\\('torch', torch.__version__\\)\")",
+      "Bash(python -c \"import matplotlib; print\\('matplotlib', matplotlib.__version__\\)\")",
+      "Bash(python -c \"import sklearn; print\\('sklearn', sklearn.__version__\\)\")",
+      "Bash(python recommender-ai-service/models/train_models.py)",
+      "Bash(python -c \"import csv; rows=list\\(csv.DictReader\\(open\\('c:/Ass5-6/data_user500.csv'\\)\\)\\); print\\('rows:', len\\(rows\\)\\); print\\('actions:', set\\(r['action'] for r in rows\\)\\); print\\('users:', len\\(set\\(r['user_id'] for r in rows\\)\\)\\); print\\('products:', len\\(set\\(r['product_id'] for r in rows\\)\\)\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(docker build *)",
+      "Bash(docker compose *)",
+      "Bash(curl -s -X POST http://localhost:8011/api/chat/ -H \"Content-Type: application/json\" -d \"{\\\\\"message\\\\\": \\\\\"gợi ý sách hay\\\\\"}\")",
+      "Bash(curl -s -X POST http://localhost:8011/api/chat/ -H \"Content-Type: application/json\" -d \"{\\\\\"message\\\\\": \\\\\"hello\\\\\"}\")",
+      "Bash(curl -s -X POST http://localhost:8000/api/recommendations/chat/ -H \"Content-Type: application/json\" -d \"{\\\\\"message\\\\\": \\\\\"hello\\\\\"}\")",
+      "Bash(curl -s \"http://localhost:8005/api/books/?limit=5\")",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('count:', d.get\\('count'\\)\\); [print\\(b['id'], b['title']\\) for b in d.get\\('results',d\\)[:5]]\")",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(type\\(d\\)\\); print\\(str\\(d\\)[:300]\\)\")",
+      "Bash(curl -s \"http://localhost:8005/api/books/?limit=500\")",
+      "Bash(curl -s http://localhost:8011/api/health/)"
+    ]
+  }
+}

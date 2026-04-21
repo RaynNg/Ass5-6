@@ -7,6 +7,7 @@ import { CartProvider } from "./context/CartContext";
 
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import ChatWidget from "./components/ChatWidget";
 
 import HomePage from "./pages/HomePage";
 import BooksPage from "./pages/BooksPage";
@@ -44,6 +45,7 @@ function App() {
             </main>
             <Footer />
           </div>
+          <ChatWidget />
           <ToastContainer position="top-right" autoClose={3000} />
         </CartProvider>
       </AuthProvider>

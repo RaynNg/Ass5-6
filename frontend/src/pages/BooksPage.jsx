@@ -2,21 +2,25 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { FiFilter, FiGrid, FiList } from "react-icons/fi";
 import { bookService, catalogService } from "../services";
+import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import BookCard from "../components/BookCard";
 import Loading from "../components/Loading";
 import EmptyState from "../components/EmptyState";
+import RecommendationSection from "../components/RecommendationSection";
 
 export default function BooksPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [books, setBooks] = useState([]);
-  const [catalogs, setCatalogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState("grid");
-  const [showFilters, setShowFilters] = useState(false);
+  const [books, setBooks]               = useState([]);
+  const [catalogs, setCatalogs]         = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [viewMode, setViewMode]         = useState("grid");
+  const [showFilters, setShowFilters]   = useState(false);
+  const { customer }                    = useAuth();
 
-  const catalogId = searchParams.get("catalog");
+  const catalogId  = searchParams.get("catalog");
   const searchQuery = searchParams.get("search");
-  const sortBy = searchParams.get("sort") || "newest";
+  const sortBy     = searchParams.get("sort") || "newest";
 
   useEffect(() => {
     const fetchCatalogs = async () => {
@@ -35,10 +39,10 @@ export default function BooksPage() {
       setLoading(true);
       try {
         const params = {};
-        if (catalogId) params.catalog_id = catalogId;
-        if (searchQuery) params.search = searchQuery;
-        if (sortBy === "newest") params.ordering = "-created_at";
-        if (sortBy === "price_low") params.ordering = "price";
+        if (catalogId)  params.catalog_id = catalogId;
+        if (searchQuery) params.search    = searchQuery;
+        if (sortBy === "newest")     params.ordering = "-created_at";
+        if (sortBy === "price_low")  params.ordering = "price";
         if (sortBy === "price_high") params.ordering = "-price";
 
         const response = await bookService.getAll(params);
@@ -79,7 +83,6 @@ export default function BooksPage() {
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Sort */}
           <select
             value={sortBy}
             onChange={(e) => handleSortChange(e.target.value)}
@@ -90,7 +93,6 @@ export default function BooksPage() {
             <option value="price_high">Giá cao - thấp</option>
           </select>
 
-          {/* View Mode */}
           <div className="flex border rounded-lg overflow-hidden">
             <button
               onClick={() => setViewMode("grid")}
@@ -106,7 +108,6 @@ export default function BooksPage() {
             </button>
           </div>
 
-          {/* Mobile Filter Toggle */}
           <button
             onClick={() => setShowFilters(!showFilters)}
             className="md:hidden p-2 border rounded-lg"
@@ -116,11 +117,10 @@ export default function BooksPage() {
         </div>
       </div>
 
+      {/* Content */}
       <div className="flex gap-8">
-        {/* Sidebar Filters */}
-        <aside
-          className={`w-64 flex-shrink-0 ${showFilters ? "block" : "hidden"} md:block`}
-        >
+        {/* Sidebar */}
+        <aside className={`w-64 flex-shrink-0 ${showFilters ? "block" : "hidden"} md:block`}>
           <div className="bg-white rounded-xl p-6 shadow-sm">
             <h3 className="font-semibold text-gray-800 mb-4">Danh mục</h3>
             <ul className="space-y-2">
@@ -128,9 +128,7 @@ export default function BooksPage() {
                 <button
                   onClick={() => handleCatalogChange(null)}
                   className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                    !catalogId
-                      ? "bg-primary-100 text-primary-700 font-medium"
-                      : "hover:bg-gray-100"
+                    !catalogId ? "bg-primary-100 text-primary-700 font-medium" : "hover:bg-gray-100"
                   }`}
                 >
                   Tất cả
@@ -154,7 +152,7 @@ export default function BooksPage() {
           </div>
         </aside>
 
-        {/* Books Grid */}
+        {/* Books */}
         <div className="flex-grow">
           {loading ? (
             <Loading />
@@ -178,6 +176,12 @@ export default function BooksPage() {
           )}
         </div>
       </div>
+
+      {/* AI Recommendation strip */}
+      <RecommendationSection
+        userId={customer?.id?.toString() || ""}
+        title={searchQuery ? `Gợi ý liên quan đến "${searchQuery}"` : "Gợi ý cho bạn"}
+      />
     </div>
   );
 }
@@ -185,22 +189,14 @@ export default function BooksPage() {
 function BookListItem({ book }) {
   const { addItem } = useCart();
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(price);
-  };
+  const formatPrice = (price) =>
+    new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price);
 
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm flex gap-4">
       <div className="w-32 h-40 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
         {book.image_url ? (
-          <img
-            src={book.image_url}
-            alt={book.title}
-            className="w-full h-full object-cover"
-          />
+          <img src={book.image_url} alt={book.title} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-100 to-primary-200">
             <span className="text-4xl">📚</span>
@@ -210,13 +206,9 @@ function BookListItem({ book }) {
       <div className="flex-grow">
         <h3 className="font-semibold text-gray-800 text-lg">{book.title}</h3>
         <p className="text-gray-500">{book.author}</p>
-        <p className="text-gray-600 text-sm mt-2 line-clamp-2">
-          {book.description}
-        </p>
+        <p className="text-gray-600 text-sm mt-2 line-clamp-2">{book.description}</p>
         <div className="mt-4 flex items-center justify-between">
-          <span className="text-xl font-bold text-primary-600">
-            {formatPrice(book.price)}
-          </span>
+          <span className="text-xl font-bold text-primary-600">{formatPrice(book.price)}</span>
           <button
             onClick={() => addItem(book.id)}
             disabled={book.stock === 0}
@@ -229,5 +221,3 @@ function BookListItem({ book }) {
     </div>
   );
 }
-
-import { useCart } from "../context/CartContext";

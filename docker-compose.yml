@@ -443,6 +443,23 @@ services:
     volumes:
       - comment-data:/app/data
 
+  # ─────────────────── Neo4j Knowledge Base ───────────────────
+  neo4j:
+    image: neo4j:5.15-community
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/bookstore123
+      - NEO4J_PLUGINS=[]
+    volumes:
+      - neo4j-data:/data
+    healthcheck:
+      test: ["CMD", "neo4j", "status"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
   # ─────────────────── Recommender AI Service ───────────────────
   recommender-ai-service:
     build: ./recommender-ai-service
@@ -455,6 +472,10 @@ services:
       - DB_NAME=recommender_db
       - DB_USER=postgres
       - DB_PASSWORD=postgres
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=bookstore123
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     depends_on:
       comment-rate-service:
         condition: service_started
@@ -462,10 +483,18 @@ services:
         condition: service_started
       postgres-recommender:
         condition: service_healthy
+      neo4j:
+        condition: service_healthy
     volumes:
       - recommender-data:/app/data
+      - ./data_user500.csv:/app/data_user500.csv:ro
+    command: >
+      sh -c "python manage.py migrate --run-syncdb &&
+             python manage.py build_kb_graph &&
+             python manage.py runserver 0.0.0.0:8000"
 
 volumes:
+  neo4j-data:
   rabbitmq-data:
   postgres-auth-data:
   postgres-staff-data:
